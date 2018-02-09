@@ -1,6 +1,7 @@
 package main
 
 import (
+	"time"
 	"fmt"
 	"io"
 	"log"
@@ -13,8 +14,8 @@ import (
 func symbolicate(filePath string) string {
 	symFile := filePath + ".sym"
 	tmpFile := filePath + ".tmp"
-	cmdIcrash := exec.Command("python", "/home/shenyuanv/Work/Zecops-Tools/iCrash/icrash_linux.py", "-o", tmpFile, filePath)
-	cmdSym := exec.Command("/home/shenyuanv/Work/Zecops-Tools/iCrash/symbolicatecrash_linux", "-o", symFile, tmpFile)
+	cmdIcrash := exec.Command("python", "/home/ubuntu/Zecops-Tools/iCrash/icrash_linux.py", "-o", tmpFile, filePath)
+	cmdSym := exec.Command("/home/ubuntu/Zecops-Tools/iCrash/symbolicatecrash_linux", "-o", symFile, tmpFile)
 	errIcrash := cmdIcrash.Run()
 	errSym := cmdSym.Run()
 	if errSym != nil || errIcrash != nil {
@@ -28,14 +29,13 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("method:", r.Method)
 	if r.Method == "POST" {
 		r.ParseMultipartForm(32 << 20)
-		file, handler, err := r.FormFile("uploadfile")
+		file, _, err := r.FormFile("uploadfile")
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 		defer file.Close()
-		fmt.Fprintf(w, "%v", handler.Header)
-		f, err := os.OpenFile("./logs/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+		f, err := os.OpenFile("./logs/"+time.Now().String(), os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"time"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 func symbolicate(filePath string) string {
@@ -61,5 +61,7 @@ func main() {
 	fmt.Printf("starting web server...")
 	http.HandleFunc("/symbolicate", upload)
 	http.HandleFunc("/", indexPage)
+	fs := http.FileServer(http.Dir("static/download"))
+	http.Handle("/download/", http.StripPrefix("/download/", fs))
 	log.Fatal(http.ListenAndServe(":80", nil))
 }

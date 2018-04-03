@@ -1,17 +1,19 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 )
 
-func symbolicate(filePath string) string {
+func symbolicateCrash(filePath string) string {
 	symFile := filePath + ".sym"
 	tmpFile := filePath + ".tmp"
 	cmdIcrash := exec.Command("python", "/home/ubuntu/Zecops-Tools/iCrash/icrash_linux.py", "-o", tmpFile, filePath)
@@ -25,7 +27,17 @@ func symbolicate(filePath string) string {
 	return symFile
 }
 
-func upload(w http.ResponseWriter, r *http.Request) {
+func symbolicatePanic(filePath string) string {
+	symFile := filePath + ".symp"
+	cmdSym := exec.Command("python", "/home/ubuntu/Zecops-Tools/iCrash/ipanic.py", "-o", symFile, filePath)
+	errSym := cmdSym.Run()
+	if errSym != nil {
+		return fmt.Sprint(errSym)
+	}
+	return symFile
+}
+
+func symbolicate(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("method:", r.Method)
 	if r.Method == "POST" {
 		r.ParseMultipartForm(32 << 20)
@@ -35,7 +47,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer file.Close()
-		f, err := os.OpenFile("./logs/"+time.Now().String(), os.O_WRONLY|os.O_CREATE, 0666)
+		f, err := os.OpenFile("./logs/"+getMD5(file), os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -47,10 +59,31 @@ func upload(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 			return
 		}
-		symFile := symbolicate(fPath)
-		fmt.Println(symFile)
+
+		logType := r.FormValue("type")
+		symFile := "static/sym.html"
+		if logType == "panic" {
+			symFile = symbolicatePanic(fPath)
+		} else if logType == "crash" {
+			symFile = symbolicateCrash(fPath)
+		}
 		http.ServeFile(w, r, symFile)
 	}
+}
+
+func getMD5(f multipart.File) string {
+	var returnMD5String string
+	hash := md5.New()
+	if _, err := io.Copy(hash, f); err != nil {
+		return "no_md5"
+	}
+	//Get the 16 bytes hash
+	hashInBytes := hash.Sum(nil)
+
+	//Convert the bytes to a string
+	returnMD5String = hex.EncodeToString(hashInBytes)
+
+	return returnMD5String
 }
 
 func indexPage(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +92,7 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	fmt.Printf("starting web server...")
-	http.HandleFunc("/symbolicate", upload)
+	http.HandleFunc("/symbolicate", symbolicate)
 	http.HandleFunc("/", indexPage)
 	fs := http.FileServer(http.Dir("static/download"))
 	http.Handle("/download/", http.StripPrefix("/download/", fs))

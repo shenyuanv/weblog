@@ -5,15 +5,25 @@
 </head>
 
 <body>
-    <h1>symbolicate crash</h1>
+    <h1>iOS</h1>
+    <h2>symbolicate crash</h2>
     <form enctype="multipart/form-data" action="/symbolicate?type=crash" method="post">
         <input type="file" name="uploadfile" />
         <input type="submit" value="upload" />
     </form>
 
 
-    <h1>symbolicate panic</h1>
+    <h2>symbolicate panic</h2>
     <form enctype="multipart/form-data" action="/symbolicate?type=panic" method="post">
+        <input type="file" name="uploadfile" />
+        <input type="submit" value="upload" />
+    </form>
+
+
+    <h1>New API</h1>
+
+    <h2>symbolicate crash</h2>
+    <form enctype="multipart/form-data" action="/symbolicate?type=crash&v=2" method="post">
         <input type="file" name="uploadfile" />
         <input type="submit" value="upload" />
     </form>

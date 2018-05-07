@@ -27,6 +27,20 @@ func symbolicateCrash(filePath string) string {
 	return symFile
 }
 
+func symbolicateCrashNew(filePath string) string {
+	symFile := filePath + ".sym"
+	tmpFile := filePath + ".tmp"
+	cmdSym := exec.Command("/home/ubuntu/Zecops-Tools/iCrash/symbolicatecrash_linux", "-o", tmpFile, filePath)
+	cmdIcrash := exec.Command("python", "/home/ubuntu/Zecops-Tools/iCrash/icrash.py", "-o", symFile, tmpFile)
+	errIcrash := cmdIcrash.Run()
+	errSym := cmdSym.Run()
+	if errSym != nil || errIcrash != nil {
+		fmt.Println(errSym, errIcrash)
+		return fmt.Sprint(errSym, errIcrash)
+	}
+	return symFile
+}
+
 func symbolicatePanic(filePath string) string {
 	symFile := filePath + ".symp"
 	cmdSym := exec.Command("python", "/home/ubuntu/Zecops-Tools/iCrash/ipanic.py", "-o", symFile, filePath)
@@ -53,6 +67,7 @@ func symbolicate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer f.Close()
+		file.Seek(0, 0)
 		io.Copy(f, file)
 		fPath, err := filepath.Abs(f.Name())
 		if err != nil {
@@ -65,7 +80,11 @@ func symbolicate(w http.ResponseWriter, r *http.Request) {
 		if logType == "panic" {
 			symFile = symbolicatePanic(fPath)
 		} else if logType == "crash" {
-			symFile = symbolicateCrash(fPath)
+			if r.FormValue("v") == "2" {
+				symFile = symbolicateCrashNew(fPath)
+			} else {
+				symFile = symbolicateCrash(fPath)
+			}
 		}
 		http.ServeFile(w, r, symFile)
 	}
@@ -77,7 +96,6 @@ func getMD5(f multipart.File) string {
 	if _, err := io.Copy(hash, f); err != nil {
 		return "no_md5"
 	}
-	//Get the 16 bytes hash
 	hashInBytes := hash.Sum(nil)
 
 	//Convert the bytes to a string
